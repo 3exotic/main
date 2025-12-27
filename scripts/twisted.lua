@@ -1,185 +1,162 @@
--- Services a
+-- =========================
+-- TWISTED MURDERER
+-- =========================
+
 local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
 
--- Persistent storage across reinjections
+-- ===== GLOBAL STATE =====
 getgenv().TwistedState = getgenv().TwistedState or {
     noclip = false,
     infJump = false,
-    shiftClickTP = false,
-    autoServerHop = false,
-    autoFarmWins = false
+    shiftTP = false,
+    autoHop = false,
+    autoFarm = false
 }
+local toggles = getgenv().TwistedState
 
--- Save current toggles back to persistent state
-local function SaveState(toggles)
-    getgenv().TwistedState.noclip = toggles.noclip
-    getgenv().TwistedState.infJump = toggles.infJump
-    getgenv().TwistedState.shiftClickTP = toggles.shiftClickTP
-    getgenv().TwistedState.autoServerHop = toggles.autoServerHop
-    getgenv().TwistedState.autoFarmWins = toggles.autoFarmWins
+-- ===== GUI PARENT (XENO SAFE) =====
+local guiParent
+pcall(function()
+    guiParent = gethui()
+end)
+if not guiParent then
+    guiParent = game:GetService("CoreGui")
 end
 
--- Script reinjection function
-function getgenv().Reinject()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/twisted.lua"))()
-end
-
--- Current toggles in this execution
-local toggles = {
-    noclip = getgenv().TwistedState.noclip,
-    infJump = getgenv().TwistedState.infJump,
-    shiftClickTP = getgenv().TwistedState.shiftClickTP,
-    autoServerHop = getgenv().TwistedState.autoServerHop,
-    autoFarmWins = getgenv().TwistedState.autoFarmWins
-}
-
--- Function to build GUI
-local function createGUI()
-    if player:FindFirstChild("PlayerGui"):FindFirstChild("TwistedMurdererUI") then
-        player.PlayerGui.TwistedMurdererUI:Destroy()
+-- ===== CLEAR OLD =====
+for _,v in ipairs(guiParent:GetChildren()) do
+    if v.Name == "TwistedMurdererUI" then
+        v:Destroy()
     end
+end
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "TwistedMurdererUI"
-    screenGui.Parent = player.PlayerGui
+-- ===== GUI =====
+local ScreenGui = Instance.new("ScreenGui", guiParent)
+ScreenGui.Name = "TwistedMurdererUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 400, 0, 450)
-    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -225)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    mainFrame.Parent = screenGui
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.fromOffset(420,480)
+Main.Position = UDim2.fromScale(0.5,0.5)
+Main.AnchorPoint = Vector2.new(0.5,0.5)
+Main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Main.BorderSizePixel = 0
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,18)
 
-    local mCorner = Instance.new("UICorner", mainFrame)
-    mCorner.CornerRadius = UDim.new(0,20)
-
-    local title = Instance.new("TextLabel", mainFrame)
-    title.Size = UDim2.new(1, -50, 0, 50)
-    title.Position = UDim2.new(0, 0, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = "Twisted Murderer"
-    title.TextColor3 = Color3.fromRGB(255,0,0)
-    title.Font = Enum.Font.GothamBold
-    title.TextScaled = true
-    title.TextXAlignment = Enum.TextXAlignment.Center
-
-    local closeButton = Instance.new("TextButton", mainFrame)
-    closeButton.Size = UDim2.new(0, 35, 0, 35)
-    closeButton.Position = UDim2.new(1, -45, 0, 10)
-    closeButton.BackgroundColor3 = Color3.fromRGB(80,0,0)
-    closeButton.Text = "X"
-    closeButton.TextColor3 = Color3.fromRGB(255,255,255)
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.TextSize = 24
-
-    local cbCorner = Instance.new("UICorner", closeButton)
-    cbCorner.CornerRadius = UDim.new(0,10)
-
-    closeButton.MouseButton1Click:Connect(function()
-        mainFrame.Visible = false
-    end)
-
-    local scrollFrame = Instance.new("ScrollingFrame", mainFrame)
-    scrollFrame.Size = UDim2.new(1, -20, 0, 380)
-    scrollFrame.Position = UDim2.new(0, 10, 0, 70)
-    scrollFrame.BackgroundTransparency = 1
-    scrollFrame.ScrollBarThickness = 6
-
-    local layout = Instance.new("UIListLayout", scrollFrame)
-    layout.Padding = UDim.new(0,10)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    local function createToggleButton(name, key)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -10, 0, 40)
-        btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 20
-        btn.Parent = scrollFrame
-
-        local bCorner = Instance.new("UICorner", btn)
-        bCorner.CornerRadius = UDim.new(0,10)
-
-        local function updateText()
-            btn.Text = name.." ["..(toggles[key] and "ON" or "OFF").."]"
-            btn.BackgroundColor3 = toggles[key] and Color3.fromRGB(70,70,70) or Color3.fromRGB(50,50,50)
+-- ===== DRAG =====
+do
+    local dragging, startPos, dragStart
+    Main.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = i.Position
+            startPos = Main.Position
         end
-        updateText()
-
-        btn.MouseButton1Click:Connect(function()
-            toggles[key] = not toggles[key]
-            SaveState(toggles)
-            updateText()
-        end)
-    end
-
-    local function createActionButton(name, callback)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -10, 0, 40)
-        btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 20
-        btn.Text = name
-        btn.Parent = scrollFrame
-
-        local bCorner = Instance.new("UICorner", btn)
-        bCorner.CornerRadius = UDim.new(0,10)
-
-        btn.MouseButton1Click:Connect(function()
-            btn.Active = false
-            btn.AutoButtonColor = false
-            btn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-            callback()
-        end)
-    end
-
-    -- Toggle buttons
-    createToggleButton("Noclip", "noclip")
-    createToggleButton("Inf Jump", "infJump")
-    createToggleButton("Shift + Click TP", "shiftClickTP")
-    createToggleButton("Auto Server Hop", "autoServerHop")
-    createToggleButton("Auto Farm Wins", "autoFarmWins")
-
-    -- Manual Server Hop
-    createActionButton("Server Hop", function()
-        SaveState(toggles)
-        TeleportService:Teleport(game.PlaceId, player)
     end)
-
-    scrollFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y)
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        scrollFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = i.Position - dragStart
+            Main.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
     end)
 end
 
--- Build GUI
-createGUI()
+-- ===== TITLE =====
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1,-60,0,50)
+Title.Position = UDim2.fromOffset(20,10)
+Title.BackgroundTransparency = 1
+Title.Text = "Twisted Murderer"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 28
+Title.TextColor3 = Color3.fromRGB(255,40,40)
+Title.TextXAlignment = Enum.TextXAlignment.Center
+Title.TextYAlignment = Enum.TextYAlignment.Center
 
--- Persist GUI after death
-player.CharacterAdded:Connect(function()
-    task.wait(1)
-    createGUI()
+-- ===== CLOSE =====
+local Close = Instance.new("TextButton", Main)
+Close.Size = UDim2.fromOffset(36,36)
+Close.Position = UDim2.new(1,-46,0,12)
+Close.Text = "X"
+Close.Font = Enum.Font.GothamBold
+Close.TextSize = 22
+Close.BackgroundColor3 = Color3.fromRGB(90,0,0)
+Close.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0,10)
+Close.MouseButton1Click:Connect(function()
+    Main.Visible = false
 end)
 
--- Implementation loops
+-- ===== SCROLL =====
+local Scroll = Instance.new("ScrollingFrame", Main)
+Scroll.Size = UDim2.new(1,-20,1,-80)
+Scroll.Position = UDim2.fromOffset(10,70)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 6
+Scroll.CanvasSize = UDim2.new(0,0,0,0)
+
+local Layout = Instance.new("UIListLayout", Scroll)
+Layout.Padding = UDim.new(0,10)
+Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Scroll.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 10)
+end)
+
+-- ===== TOGGLE BUTTON =====
+local function ToggleButton(text,key)
+    local b = Instance.new("TextButton", Scroll)
+    b.Size = UDim2.new(1,-10,0,42)
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 18
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+
+    local function refresh()
+        b.Text = text .. " : " .. (toggles[key] and "ON" or "OFF")
+        b.BackgroundColor3 = toggles[key]
+            and Color3.fromRGB(70,70,70)
+            or Color3.fromRGB(45,45,45)
+    end
+
+    refresh()
+    b.MouseButton1Click:Connect(function()
+        toggles[key] = not toggles[key]
+        refresh()
+    end)
+end
+
+-- ===== BUTTONS =====
+ToggleButton("Noclip", "noclip")
+ToggleButton("Infinite Jump", "infJump")
+ToggleButton("Shift + Click TP", "shiftTP")
+ToggleButton("Auto Server Hop", "autoHop")
+ToggleButton("Auto Farm Wins", "autoFarm")
+
+-- =========================
+-- FEATURES
+-- =========================
 
 -- Noclip
 RunService.Stepped:Connect(function()
-    if toggles.noclip then
-        local char = player.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
+    if toggles.noclip and player.Character then
+        for _,v in ipairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
             end
         end
     end
@@ -187,51 +164,62 @@ end)
 
 -- Infinite Jump
 UserInputService.JumpRequest:Connect(function()
-    if toggles.infJump then
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, 50, char.HumanoidRootPart.Velocity.Z)
+    if toggles.infJump and player.Character then
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Velocity = Vector3.new(hrp.Velocity.X, 60, hrp.Velocity.Z)
         end
     end
 end)
 
 -- Shift + Click TP
 local mouse = player:GetMouse()
-UserInputService.InputBegan:Connect(function(input)
-    if toggles.shiftClickTP and input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position)
+UserInputService.InputBegan:Connect(function(i)
+    if toggles.shiftTP
+        and i.UserInputType == Enum.UserInputType.MouseButton1
+        and UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+        and player.Character
+    then
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(mouse.Hit.Position)
         end
     end
 end)
 
--- Auto Farm Wins
-spawn(function()
-    while task.wait(1) do
-        if toggles.autoFarmWins then
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local x = 247.56 + math.random(-20,20)
-                local z = -755.99 + math.random(-20,20)
-                char.HumanoidRootPart.CFrame = CFrame.new(x, 1400, z)
+-- ===== AUTO FARM WINS (EVERY FRAME, OFFSET CHANGES EVERY 0.5s) =====
+local farmOffset = Vector3.zero
+local lastOffsetUpdate = 0
+
+RunService.Heartbeat:Connect(function(dt)
+    if toggles.autoFarm and player.Character then
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            lastOffsetUpdate += dt
+            if lastOffsetUpdate >= 0.5 then
+                lastOffsetUpdate = 0
+                farmOffset = Vector3.new(
+                    math.random(-20,20),
+                    0,
+                    math.random(-20,20)
+                )
             end
+
+            hrp.CFrame = CFrame.new(
+                247.56,
+                1400,
+                -755.99
+            ) + farmOffset
         end
     end
 end)
 
 -- Auto Server Hop
-spawn(function()
+task.spawn(function()
     while task.wait(5) do
-        if toggles.autoServerHop then
-            if #Players:GetPlayers() < 4 then
-                SaveState(toggles)
-                TeleportService:Teleport(game.PlaceId, player)
-                if getgenv().Reinject then
-                    getgenv().Reinject()
-                end
-                break
-            end
+        if toggles.autoHop and #Players:GetPlayers() < 4 then
+            TeleportService:Teleport(game.PlaceId, player)
+            break
         end
     end
 end)
