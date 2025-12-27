@@ -150,7 +150,7 @@ makeToggleButton("Shift + Click TP","ShiftTP")
 makeToggleButton("Auto Farm Wins","AutoFarm")
 makeToggleButton("Auto Server Hop","AutoHop")
 
--- SERVER HOP FUNCTION WITH RETRY AND TOGGLE SAVE
+-- HOP TO SERVER FUNCTION (4+ players and not full)
 local function hopToAvailableServer()
     while true do
         local success, servers = pcall(function()
@@ -160,7 +160,7 @@ local function hopToAvailableServer()
             table.sort(servers,function(a,b) return a.playing>b.playing end)
             local hopped = false
             for _,srv in ipairs(servers) do
-                if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+                if srv.id~=game.JobId and srv.playing<srv.maxPlayers and srv.playing>=4 then
                     -- SAVE TOGGLES BEFORE TELEPORT
                     local serializedState = HttpService:JSONEncode(State)
                     serializedState = serializedState:gsub("\\","\\\\"):gsub("'","\\'")
