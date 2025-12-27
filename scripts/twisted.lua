@@ -218,8 +218,8 @@ RunService.Heartbeat:Connect(function(dt)
         farmTimer+=dt
         if farmTimer>=0.5 then
             farmTimer=0
-            local ox=math.random(10,25)*(math.random(0,1)==0 and -1 or 1)
-            local oz=math.random(10,25)*(math.random(0,1)==0 and -1 or 1)
+            local ox=math.random(10,15)*(math.random(0,1)==0 and -1 or 1)
+            local oz=math.random(10,15)*(math.random(0,1)==0 and -1 or 1)
             hrp.CFrame=hrp.CFrame*CFrame.new(ox,0,oz)
         end
     end
