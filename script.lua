@@ -20,7 +20,7 @@ local gameList = {
     ["13772394625"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/blade.lua"
 }
 
-local universalUrl = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/universal.lua"
+local universalUrl = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua"
 local discordLink = "https://discord.gg/vUFXDnHQXN"
 
 local supported = gameList[placeId] ~= nil
