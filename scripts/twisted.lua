@@ -33,17 +33,13 @@ end)
 spawn(function()
     local vu = game:GetService("VirtualUser")
     while task.wait(30) do
-        -- VirtualUser click
         if vu then
             vu:CaptureController()
             vu:ClickButton2(Vector2.new(0,0))
         end
-        -- Tiny Humanoid jump
         if player.Character and player.Character:FindFirstChild("Humanoid") then
-            local h = player.Character.Humanoid
-            h:ChangeState(Enum.HumanoidStateType.Jumping)
+            player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         end
-        -- Slight movement of HumanoidRootPart
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
             hrp.CFrame = hrp.CFrame * CFrame.new(math.random()*0.2-0.1,0,math.random()*0.2-0.1)
@@ -156,24 +152,18 @@ makeToggleButton("Auto Server Hop","AutoHop")
 
 -- SERVER HOP BUTTON
 makeButton("Server Hop", function()
-    local function serialize(t)
-        local s="{"
-        for k,v in pairs(t) do s..=string.format("[%q]=%s,",k,tostring(v)) end
-        return s.."}"
-    end
-
-    if queue_on_teleport then
-        queue_on_teleport([[
-            getgenv().TwistedState = ]]..serialize(State)..[[
-            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-        ]])
-    end
-
     local function getServers()
         local req=game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
         local data=HttpService:JSONDecode(req)
         table.sort(data.data,function(a,b) return a.playing>b.playing end)
         return data.data
+    end
+
+    if queue_on_teleport then
+        queue_on_teleport([[
+            getgenv().TwistedState = ]]..HttpService:JSONEncode(State)..[[
+            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
+        ]])
     end
 
     for _,srv in ipairs(getServers()) do
@@ -207,15 +197,11 @@ mouse.Button1Down:Connect(function()
 end)
 
 -- AUTO FARM WINS (Fixed position)
-local farmTimer=0
-RunService.Heartbeat:Connect(function(dt)
+RunService.Heartbeat:Connect(function()
     if State.AutoFarm and player.Character then
         local hrp=player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        hrp.CFrame=CFrame.new(247.56,1400,-755.99)
-        farmTimer+=dt
-        if farmTimer>=0.5 then
-            farmTimer=0
+        if hrp then
+            hrp.CFrame=CFrame.new(247.56,1400,-755.99)
         end
     end
 end)
@@ -224,11 +210,13 @@ end)
 task.spawn(function()
     while task.wait(5) do
         if State.AutoHop and #Players:GetPlayers()<4 then
-            for _,srv in ipairs(HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data) do
+            local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
+            table.sort(servers,function(a,b) return a.playing>b.playing end)
+            for _,srv in ipairs(servers) do
                 if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
                     if queue_on_teleport then
                         queue_on_teleport([[
-                            getgenv().TwistedState = ]].."{Noclip="..tostring(State.Noclip)..",InfJump="..tostring(State.InfJump)..",ShiftTP="..tostring(State.ShiftTP)..",AutoFarm="..tostring(State.AutoFarm)..",AutoHop=true}"..[[
+                            getgenv().TwistedState = ]]..HttpService:JSONEncode(State)..[[
                             loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
                         ]])
                     end
@@ -240,46 +228,38 @@ task.spawn(function()
     end
 end)
 
--- DEATH-BASED SERVER HOP
+-- DEATH-BASED SERVER HOP WITH SAFE REINJECTION
 local deathLog = {}
-local function serverHopWithReinject()
-    if queue_on_teleport then
-        queue_on_teleport([[
-            getgenv().TwistedState = ]]..game:GetService("HttpService"):JSONEncode(State)..[[
-            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-        ]])
-    end
-    local function getServers()
-        local req=game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
-        local data=HttpService:JSONDecode(req)
-        table.sort(data.data,function(a,b) return a.playing>b.playing end)
-        return data.data
-    end
-    for _,srv in ipairs(getServers()) do
-        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
-            break
-        end
-    end
-end
-
-local function recordDeath()
-    local now = tick()
-    table.insert(deathLog, now)
-    for i=#deathLog,1,-1 do
-        if now - deathLog[i] > 60 then
-            table.remove(deathLog,i)
-        end
-    end
-    if #deathLog >= 3 then
-        serverHopWithReinject()
-    end
-end
-
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid",5)
     if hum then
-        hum.Died:Connect(recordDeath)
+        hum.Died:Connect(function()
+            local now = tick()
+            table.insert(deathLog, now)
+            for i=#deathLog,1,-1 do
+                if now - deathLog[i] > 60 then
+                    table.remove(deathLog,i)
+                end
+            end
+            if #deathLog >= 3 then
+                task.spawn(function() -- defer execution for reliable queue_on_teleport
+                    if queue_on_teleport then
+                        queue_on_teleport([[
+                            getgenv().TwistedState = ]]..HttpService:JSONEncode(State)..[[
+                            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
+                        ]])
+                    end
+                    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
+                    table.sort(servers,function(a,b) return a.playing>b.playing end)
+                    for _,srv in ipairs(servers) do
+                        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+                            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
+                            break
+                        end
+                    end
+                end)
+            end
+        end)
     end
 end)
 
