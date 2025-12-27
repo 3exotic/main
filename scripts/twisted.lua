@@ -159,9 +159,13 @@ makeButton("Server Hop", function()
         return data.data
     end
 
+    -- Save current toggle state
+    getgenv().TwistedState = State
+
+    -- Queue reinjection
     if queue_on_teleport then
         queue_on_teleport([[
-            getgenv().TwistedState = ]]..HttpService:JSONEncode(State)..[[
+            if not getgenv().TwistedState then getgenv().TwistedState = {} end
             loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
         ]])
     end
@@ -214,9 +218,10 @@ task.spawn(function()
             table.sort(servers,function(a,b) return a.playing>b.playing end)
             for _,srv in ipairs(servers) do
                 if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+                    getgenv().TwistedState = State
                     if queue_on_teleport then
                         queue_on_teleport([[
-                            getgenv().TwistedState = ]]..HttpService:JSONEncode(State)..[[
+                            if not getgenv().TwistedState then getgenv().TwistedState = {} end
                             loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
                         ]])
                     end
@@ -228,8 +233,26 @@ task.spawn(function()
     end
 end)
 
--- DEATH-BASED SERVER HOP WITH SAFE REINJECTION
+-- DEATH-BASED SERVER HOP WITH REINJECTION
 local deathLog = {}
+local function safeDeathServerHop()
+    getgenv().TwistedState = State
+    if queue_on_teleport then
+        queue_on_teleport([[
+            if not getgenv().TwistedState then getgenv().TwistedState = {} end
+            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
+        ]])
+    end
+    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
+    table.sort(servers,function(a,b) return a.playing>b.playing end)
+    for _,srv in ipairs(servers) do
+        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
+            break
+        end
+    end
+end
+
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid",5)
     if hum then
@@ -242,22 +265,7 @@ player.CharacterAdded:Connect(function(char)
                 end
             end
             if #deathLog >= 3 then
-                task.spawn(function() -- defer execution for reliable queue_on_teleport
-                    if queue_on_teleport then
-                        queue_on_teleport([[
-                            getgenv().TwistedState = ]]..HttpService:JSONEncode(State)..[[
-                            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-                        ]])
-                    end
-                    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
-                    table.sort(servers,function(a,b) return a.playing>b.playing end)
-                    for _,srv in ipairs(servers) do
-                        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-                            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
-                            break
-                        end
-                    end
-                end)
+                safeDeathServerHop()
             end
         end)
     end
