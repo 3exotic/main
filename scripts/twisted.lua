@@ -163,6 +163,7 @@ local function hopToAvailableServer()
                 if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
                     -- SAVE TOGGLES BEFORE TELEPORT
                     local serializedState = HttpService:JSONEncode(State)
+                    serializedState = serializedState:gsub("\\","\\\\"):gsub("'","\\'")
                     if queue_on_teleport then
                         queue_on_teleport([[
                             local HttpService = game:GetService("HttpService")
