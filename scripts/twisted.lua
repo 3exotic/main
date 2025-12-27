@@ -150,29 +150,27 @@ makeToggleButton("Shift + Click TP","ShiftTP")
 makeToggleButton("Auto Farm Wins","AutoFarm")
 makeToggleButton("Auto Server Hop","AutoHop")
 
--- SERVER HOP BUTTON
-makeButton("Server Hop", function()
-    local function getServers()
-        local req=game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
-        local data=HttpService:JSONDecode(req)
-        table.sort(data.data,function(a,b) return a.playing>b.playing end)
-        return data.data
-    end
-
-    -- Save current toggle state
-    getgenv().TwistedState = State
-
-    -- Queue reinjection
+-- REINJECTION FUNCTION THAT PRESERVES TOGGLES
+local function reinject()
+    -- Save state to JSON
+    local encodedState = HttpService:JSONEncode(State)
     if queue_on_teleport then
         queue_on_teleport([[
-            if not getgenv().TwistedState then getgenv().TwistedState = {} end
+            local HttpService = game:GetService("HttpService")
+            getgenv().TwistedState = HttpService:JSONDecode(']]..encodedState..[[')
             loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
         ]])
     end
+end
 
-    for _,srv in ipairs(getServers()) do
+-- SERVER HOP BUTTON
+makeButton("Server Hop", function()
+    reinject()
+    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
+    table.sort(servers,function(a,b) return a.playing>b.playing end)
+    for _,srv in ipairs(servers) do
         if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
+            TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
             break
         end
     end
@@ -200,7 +198,7 @@ mouse.Button1Down:Connect(function()
     end
 end)
 
--- AUTO FARM WINS (Fixed position)
+-- AUTO FARM WINS
 RunService.Heartbeat:Connect(function()
     if State.AutoFarm and player.Character then
         local hrp=player.Character:FindFirstChild("HumanoidRootPart")
@@ -214,17 +212,11 @@ end)
 task.spawn(function()
     while task.wait(5) do
         if State.AutoHop and #Players:GetPlayers()<4 then
+            reinject()
             local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
             table.sort(servers,function(a,b) return a.playing>b.playing end)
             for _,srv in ipairs(servers) do
                 if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-                    getgenv().TwistedState = State
-                    if queue_on_teleport then
-                        queue_on_teleport([[
-                            if not getgenv().TwistedState then getgenv().TwistedState = {} end
-                            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-                        ]])
-                    end
                     TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
                     break
                 end
@@ -233,41 +225,38 @@ task.spawn(function()
     end
 end)
 
--- DEATH-BASED SERVER HOP WITH REINJECTION
+-- DEATH-BASED SERVER HOP
 local deathLog = {}
-local function safeDeathServerHop()
-    getgenv().TwistedState = State
-    if queue_on_teleport then
-        queue_on_teleport([[
-            if not getgenv().TwistedState then getgenv().TwistedState = {} end
-            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-        ]])
-    end
-    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
-    table.sort(servers,function(a,b) return a.playing>b.playing end)
-    for _,srv in ipairs(servers) do
-        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
-            break
-        end
-    end
-end
-
+local deathHopFlag = false
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid",5)
     if hum then
         hum.Died:Connect(function()
-            local now = tick()
-            table.insert(deathLog, now)
+            table.insert(deathLog, tick())
             for i=#deathLog,1,-1 do
-                if now - deathLog[i] > 60 then
+                if tick()-deathLog[i] > 60 then
                     table.remove(deathLog,i)
                 end
             end
             if #deathLog >= 3 then
-                safeDeathServerHop()
+                deathHopFlag = true
             end
         end)
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if deathHopFlag then
+        deathHopFlag = false
+        reinject()
+        local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
+        table.sort(servers,function(a,b) return a.playing>b.playing end)
+        for _,srv in ipairs(servers) do
+            if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+                TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
+                break
+            end
+        end
     end
 end)
 
