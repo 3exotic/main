@@ -29,6 +29,30 @@ pcall(function()
     end
 end)
 
+-- AFK PREVENTION
+spawn(function()
+    local vu = game:GetService("VirtualUser")
+    while task.wait(30) do
+        -- VirtualUser click
+        if vu then
+            vu:CaptureController()
+            vu:ClickButton2(Vector2.new(0,0))
+        end
+
+        -- Tiny Humanoid jump
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            local h = player.Character.Humanoid
+            h:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+
+        -- Slight movement of HumanoidRootPart
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            hrp.CFrame = hrp.CFrame * CFrame.new(math.random()*0.2-0.1,0,math.random()*0.2-0.1)
+        end
+    end
+end)
+
 -- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "TwistedMurderer"
@@ -68,30 +92,27 @@ close.TextColor3 = Color3.fromRGB(220,60,60)
 close.BackgroundColor3 = Color3.fromRGB(28,28,28)
 close.Parent = main
 Instance.new("UICorner", close).CornerRadius = UDim.new(1,0)
-
-close.MouseButton1Click:Connect(function()
-    gui.Enabled = false
-end)
+close.MouseButton1Click:Connect(function() gui.Enabled=false end)
 
 -- SCROLL
 local scroll = Instance.new("ScrollingFrame")
-scroll.Position = UDim2.new(0, 10, 0, 50)
-scroll.Size = UDim2.new(1, -20, 1, -60)
+scroll.Position = UDim2.new(0,10,0,50)
+scroll.Size = UDim2.new(1,-20,1,-60)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarImageTransparency = 0.4
 scroll.BackgroundTransparency = 1
 scroll.Parent = main
 
 local layout = Instance.new("UIListLayout", scroll)
-layout.Padding = UDim.new(0, 8)
+layout.Padding = UDim.new(0,8)
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scroll.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 8)
+    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+8)
 end)
 
 -- BUTTONS
 local function makeToggleButton(label, stateKey)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -6, 0, 38)
+    b.Size = UDim2.new(1,-6,0,38)
     b.Font = Enum.Font.Gotham
     b.TextSize = 15
     b.TextColor3 = Color3.fromRGB(235,235,235)
@@ -101,7 +122,7 @@ local function makeToggleButton(label, stateKey)
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
 
     local function refresh()
-        b.Text = label .. " : " .. (State[stateKey] and "ON" or "OFF")
+        b.Text = label.." : "..(State[stateKey] and "ON" or "OFF")
     end
     refresh()
 
@@ -115,7 +136,7 @@ end
 
 local function makeButton(label, callback)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -6, 0, 38)
+    b.Size = UDim2.new(1,-6,0,38)
     b.Text = label
     b.Font = Enum.Font.Gotham
     b.TextSize = 15
@@ -138,29 +159,27 @@ makeToggleButton("Auto Server Hop","AutoHop")
 -- SERVER HOP BUTTON
 makeButton("Server Hop", function()
     local function serialize(t)
-        local s = "{"
-        for k,v in pairs(t) do
-            s ..= string.format("[%q]=%s,", k, tostring(v))
-        end
-        return s .. "}"
+        local s="{"
+        for k,v in pairs(t) do s..=string.format("[%q]=%s,",k,tostring(v)) end
+        return s.."}"
     end
 
     if queue_on_teleport then
         queue_on_teleport([[
-            getgenv().TwistedState = ]] .. serialize(State) .. [[
-            loadstring(game:HttpGet("]] .. SCRIPT_URL .. [[", true))()
+            getgenv().TwistedState = ]]..serialize(State)..[[
+            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
         ]])
     end
 
     local function getServers()
-        local req = game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
-        local data = HttpService:JSONDecode(req)
+        local req=game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
+        local data=HttpService:JSONDecode(req)
         table.sort(data.data,function(a,b) return a.playing>b.playing end)
         return data.data
     end
 
     for _,srv in ipairs(getServers()) do
-        if srv.id ~= game.JobId and srv.playing < srv.maxPlayers then
+        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
             TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
             break
         end
@@ -171,7 +190,7 @@ end)
 RunService.Stepped:Connect(function()
     if State.Noclip and player.Character then
         for _,v in pairs(player.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
+            if v:IsA("BasePart") then v.CanCollide=false end
         end
     end
 end)
@@ -184,24 +203,24 @@ end)
 
 mouse.Button1Down:Connect(function()
     if State.ShiftTP and UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0,3,0)) end
+        local hrp=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame=CFrame.new(mouse.Hit.p+Vector3.new(0,3,0)) end
     end
 end)
 
 -- AUTO FARM WINS
-local farmTimer = 0
+local farmTimer=0
 RunService.Heartbeat:Connect(function(dt)
     if State.AutoFarm and player.Character then
-        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        local hrp=player.Character:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
-        hrp.CFrame = CFrame.new(247.56,1400,-755.99)
-        farmTimer += dt
-        if farmTimer >= 0.5 then
-            farmTimer = 0
-            local ox = math.random(10,25)*(math.random(0,1)==0 and -1 or 1)
-            local oz = math.random(10,25)*(math.random(0,1)==0 and -1 or 1)
-            hrp.CFrame = hrp.CFrame * CFrame.new(ox,0,oz)
+        hrp.CFrame=CFrame.new(247.56,1400,-755.99)
+        farmTimer+=dt
+        if farmTimer>=0.5 then
+            farmTimer=0
+            local ox=math.random(10,25)*(math.random(0,1)==0 and -1 or 1)
+            local oz=math.random(10,25)*(math.random(0,1)==0 and -1 or 1)
+            hrp.CFrame=hrp.CFrame*CFrame.new(ox,0,oz)
         end
     end
 end)
@@ -209,16 +228,16 @@ end)
 -- AUTO SERVER HOP
 task.spawn(function()
     while task.wait(5) do
-        if State.AutoHop and #Players:GetPlayers() < 4 then
+        if State.AutoHop and #Players:GetPlayers()<4 then
             for _,srv in ipairs(HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data) do
-                if srv.id ~= game.JobId and srv.playing < srv.maxPlayers then
+                if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
                     if queue_on_teleport then
                         queue_on_teleport([[
-                            getgenv().TwistedState = ]] .. "{Noclip="..tostring(State.Noclip)..",InfJump="..tostring(State.InfJump)..",ShiftTP="..tostring(State.ShiftTP)..",AutoFarm="..tostring(State.AutoFarm)..",AutoHop=true}" .. [[
-                            loadstring(game:HttpGet("]] .. SCRIPT_URL .. [[", true))()
+                            getgenv().TwistedState = ]].."{Noclip="..tostring(State.Noclip)..",InfJump="..tostring(State.InfJump)..",ShiftTP="..tostring(State.ShiftTP)..",AutoFarm="..tostring(State.AutoFarm)..",AutoHop=true}"..[[
+                            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
                         ]])
                     end
-                    TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
+                    TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
                     break
                 end
             end
