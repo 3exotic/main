@@ -19,7 +19,9 @@ local gameList = {
     ["177052655"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/twisted.lua",
     ["13772394625"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/blade.lua",
     ["920587237"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua",
-    ["155615604"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua"
+    ["155615604"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua",
+    ["14259168147"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua",
+    ["14386691987"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua"
 }
 
 local universalUrl = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua"
