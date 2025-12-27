@@ -220,50 +220,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- AUTO SERVER HOP & DEATH DETECTION
-local deathLog = {}
-local function recordDeath()
-    local now = tick()
-    table.insert(deathLog, now)
-    -- remove old entries older than 60 seconds
-    for i=#deathLog,1,-1 do
-        if now - deathLog[i] > 60 then
-            table.remove(deathLog,i)
-        end
-    end
-    -- if more than 3 deaths in last 60 sec, force server hop
-    if #deathLog >= 3 then
-        if queue_on_teleport then
-            queue_on_teleport([[
-                getgenv().TwistedState = ]]..game:GetService("HttpService"):JSONEncode(State)..[[
-                loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-            ]])
-        end
-        -- attempt server hop
-        local function getServers()
-            local req=game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
-            local data=HttpService:JSONDecode(req)
-            table.sort(data.data,function(a,b) return a.playing>b.playing end)
-            return data.data
-        end
-        for _,srv in ipairs(getServers()) do
-            if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-                TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
-                break
-            end
-        end
-    end
-end
-
--- connect death detection
-player.CharacterAdded:Connect(function(char)
-    local hum = char:WaitForChild("Humanoid",5)
-    if hum then
-        hum.Died:Connect(recordDeath)
-    end
-end)
-
--- AUTO SERVER HOP IF LOW PLAYER COUNT
+-- AUTO SERVER HOP
 task.spawn(function()
     while task.wait(5) do
         if State.AutoHop and #Players:GetPlayers()<4 then
@@ -280,6 +237,49 @@ task.spawn(function()
                 end
             end
         end
+    end
+end)
+
+-- DEATH-BASED SERVER HOP
+local deathLog = {}
+local function serverHopWithReinject()
+    if queue_on_teleport then
+        queue_on_teleport([[
+            getgenv().TwistedState = ]]..game:GetService("HttpService"):JSONEncode(State)..[[
+            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
+        ]])
+    end
+    local function getServers()
+        local req=game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")
+        local data=HttpService:JSONDecode(req)
+        table.sort(data.data,function(a,b) return a.playing>b.playing end)
+        return data.data
+    end
+    for _,srv in ipairs(getServers()) do
+        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+            TeleportService:TeleportToPlaceInstance(PLACE_ID, srv.id, player)
+            break
+        end
+    end
+end
+
+local function recordDeath()
+    local now = tick()
+    table.insert(deathLog, now)
+    for i=#deathLog,1,-1 do
+        if now - deathLog[i] > 60 then
+            table.remove(deathLog,i)
+        end
+    end
+    if #deathLog >= 3 then
+        serverHopWithReinject()
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid",5)
+    if hum then
+        hum.Died:Connect(recordDeath)
     end
 end)
 
