@@ -17,7 +17,9 @@ local gameList = {
     ["17516596118"] = "https://raw.githubusercontent.com/TheRealAvrwm/Zephyr-V2/refs/heads/main/script.lua",
     ["155615604"] = "https://api.junkie-development.de/api/v1/luascripts/public/d2286888fadfe16b0f51282f0e755ac796147cb58edf457f09a81bb06a8509a7/download",
     ["177052655"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/twisted.lua",
-    ["13772394625"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/blade.lua"
+    ["13772394625"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/blade.lua",
+    ["920587237"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua",
+    ["155615604"] = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua"
 }
 
 local universalUrl = "https://raw.githubusercontent.com/samuraa1/Solara-Hub/refs/heads/main/SH.lua"
