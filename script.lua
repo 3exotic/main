@@ -9,7 +9,8 @@ local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.Place
 local gameList = {
     ["286090429"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/arsenal.lua",
     ["1215581239"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/doomspire.lua",
-    ["841005469"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/doomspire.lua"
+    ["841005469"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/doomspire.lua",
+    ["17625359962"] = "https://raw.githubusercontent.com/blackowl1231/Z3US/refs/heads/main/main.lua"
 }
 
 local universalUrl = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/universal.lua"
