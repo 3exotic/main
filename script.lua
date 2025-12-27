@@ -9,6 +9,8 @@ local gameList = {
     ["1215581239"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/doomspire.lua"
 }
 
+local universalUrl = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/universal.lua"
+
 local blacklist = {
     ["111111111"] = true,
     ["222222222"] = true
@@ -25,12 +27,7 @@ if blacklist[userId] then
     return
 end
 
-local scriptUrl = gameList[placeId]
-
-if type(scriptUrl) ~= "string" then
-    kick("Unsupported Game")
-    return
-end
+local scriptUrl = gameList[placeId] or universalUrl
 
 local ok, source = pcall(function()
     return game:HttpGet(scriptUrl)
