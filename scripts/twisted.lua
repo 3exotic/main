@@ -150,7 +150,7 @@ makeToggleButton("Shift + Click TP","ShiftTP")
 makeToggleButton("Auto Farm Wins","AutoFarm")
 makeToggleButton("Auto Server Hop","AutoHop")
 
--- SERVER HOP FUNCTION WITH RETRY
+-- SERVER HOP FUNCTION WITH RETRY AND TOGGLE SAVE
 local function hopToAvailableServer()
     while true do
         local success, servers = pcall(function()
@@ -161,19 +161,21 @@ local function hopToAvailableServer()
             local hopped = false
             for _,srv in ipairs(servers) do
                 if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-                    -- save toggles before teleport
-                    getgenv().TwistedState = State
+                    -- SAVE TOGGLES BEFORE TELEPORT
+                    local serializedState = HttpService:JSONEncode(State)
                     if queue_on_teleport then
-                        queue_on_teleport([[loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()]])
+                        queue_on_teleport([[
+                            local HttpService = game:GetService("HttpService")
+                            getgenv().TwistedState = HttpService:JSONDecode(']]..serializedState..[[')
+                            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
+                        ]])
                     end
                     TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
                     hopped = true
                     return
                 end
             end
-            if not hopped then
-                task.wait(2) -- wait 2 seconds before retrying
-            end
+            if not hopped then task.wait(2) end
         else
             task.wait(2)
         end
