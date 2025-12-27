@@ -5,7 +5,7 @@ local placeId = tostring(game.PlaceId)
 local userId = tostring(player.UserId)
 
 local gameList = {
-    ["1234567890"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/game1.lua",
+    ["286090429"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/arsenal.lua",
     ["9876543210"] = "https://raw.githubusercontent.com/3exotic/main/refs/heads/main/game2.lua"
 }
 
