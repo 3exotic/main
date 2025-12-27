@@ -150,30 +150,39 @@ makeToggleButton("Shift + Click TP","ShiftTP")
 makeToggleButton("Auto Farm Wins","AutoFarm")
 makeToggleButton("Auto Server Hop","AutoHop")
 
--- REINJECTION FUNCTION THAT PRESERVES TOGGLES
-local function reinject()
-    -- Save state to JSON
-    local encodedState = HttpService:JSONEncode(State)
-    if queue_on_teleport then
-        queue_on_teleport([[
-            local HttpService = game:GetService("HttpService")
-            getgenv().TwistedState = HttpService:JSONDecode(']]..encodedState..[[')
-            loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()
-        ]])
+-- SERVER HOP FUNCTION WITH RETRY
+local function hopToAvailableServer()
+    while true do
+        local success, servers = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
+        end)
+        if success then
+            table.sort(servers,function(a,b) return a.playing>b.playing end)
+            local hopped = false
+            for _,srv in ipairs(servers) do
+                if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
+                    -- save toggles before teleport
+                    getgenv().TwistedState = State
+                    if queue_on_teleport then
+                        queue_on_teleport([[loadstring(game:HttpGet("]]..SCRIPT_URL..[[", true))()]])
+                    end
+                    TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
+                    hopped = true
+                    return
+                end
+            end
+            if not hopped then
+                task.wait(2) -- wait 2 seconds before retrying
+            end
+        else
+            task.wait(2)
+        end
     end
 end
 
 -- SERVER HOP BUTTON
 makeButton("Server Hop", function()
-    reinject()
-    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
-    table.sort(servers,function(a,b) return a.playing>b.playing end)
-    for _,srv in ipairs(servers) do
-        if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-            TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
-            break
-        end
-    end
+    hopToAvailableServer()
 end)
 
 -- FEATURES LOGIC
@@ -212,15 +221,7 @@ end)
 task.spawn(function()
     while task.wait(5) do
         if State.AutoHop and #Players:GetPlayers()<4 then
-            reinject()
-            local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
-            table.sort(servers,function(a,b) return a.playing>b.playing end)
-            for _,srv in ipairs(servers) do
-                if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-                    TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
-                    break
-                end
-            end
+            hopToAvailableServer()
         end
     end
 end)
@@ -248,15 +249,7 @@ end)
 RunService.Heartbeat:Connect(function()
     if deathHopFlag then
         deathHopFlag = false
-        reinject()
-        local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?limit=100&sortOrder=Desc")).data
-        table.sort(servers,function(a,b) return a.playing>b.playing end)
-        for _,srv in ipairs(servers) do
-            if srv.id~=game.JobId and srv.playing<srv.maxPlayers then
-                TeleportService:TeleportToPlaceInstance(PLACE_ID,srv.id,player)
-                break
-            end
-        end
+        hopToAvailableServer()
     end
 end)
 
