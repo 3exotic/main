@@ -27,7 +27,7 @@ end
 
 -- Script reinjection function
 function getgenv().Reinject()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/tm.lua"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/3exotic/main/refs/heads/main/scripts/twisted.lua"))()
 end
 
 -- Current toggles in this execution
